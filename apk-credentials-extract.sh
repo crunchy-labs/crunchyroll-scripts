@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -e
 
@@ -19,13 +19,20 @@ echo "[·] Verifying environment"
 if ! command -v jadx &> /dev/null; then
     echo "Command 'jadx' not found. Verify that it's installed and accessible by this script"
     exit 1
+elif ! command -v unzip &> /dev/null; then
+    echo "Command 'unzip' not found. Veritfy that it's installed and accessible by this script"
+    exit 1
 elif ! echo "test" | grep -P 'test' &> /dev/null; then
     echo "Command 'grep' doesn't support PCRE syntax ('-P' flag is missing). Verify that a compatible grep version is installed and accessible by this script"
     exit 1
 fi
 
 # variables
+unzip_dir="$(mktemp -d)"
 decompile_sources_dir="$(mktemp -d)"
+
+echo "[·] Unzipping apk"
+unzip "$1" -d "$unzip_dir"
 
 # decompile the apk into the
 echo "[·] Decompiling file (may print 'ERROR - finished with errors, count: XXX', this can safely be ignored)"
@@ -33,7 +40,7 @@ set +e
 jadx \
     --output-dir-src "$decompile_sources_dir" \
     --no-res \
-    "$1"
+    "$unzip_dir/base.apk"
 set -e
 
 # extract the secrets out of the decompiled sources
@@ -55,6 +62,7 @@ basic_auth_creds="$(echo -n "$client_id:$client_secret" | base64)"
 
 # cleanup decompiled sources
 echo "[·] Cleaning up"
+rm -r "$unzip_dir"
 rm -r "$decompile_sources_dir"
 
 # print results
